@@ -1,22 +1,21 @@
 import * as utils from "./utils";
-import { height, width, tetrominos } from "./const";
+import { height, width, tetrominos, emptyPlayfieldCell } from "./const";
 import { sideCollides, downCollides } from "./collision";
 
 let falling = utils.randomIndex(tetrominos);
 let landed = [];
-
 render();
 
 document.body.onkeydown = e => {
   if (e.keyCode === 37) {
     const next = falling.map(utils.moveLeft);
-    if (!sideCollides(landed, next)) {
+    if (!sideCollides(landed, utils.tail(next))) {
       falling = next;
     }
   }
   if (e.keyCode === 39) {
     const next = falling.map(utils.moveRight);
-    if (!sideCollides(landed, next)) {
+    if (!sideCollides(landed, utils.tail(next))) {
       falling = next;
     }
   }
@@ -31,6 +30,7 @@ document.body.onkeydown = e => {
     }
   }
 
+  // Up arrow and X are to rotate 90° clockwise.
   if (e.keyCode === 38) {
     const [center, ...coords] = falling;
     falling = [
@@ -41,6 +41,20 @@ document.body.onkeydown = e => {
     ];
   }
 
+  // Hard drop
+  if (e.keyCode === 32) {
+    let dropped = false;
+    while (!dropped) {
+      const next = falling.map(utils.moveDown);
+      if (!downCollides(landed, next)) {
+        falling = next;
+      } else {
+        dropped = true;
+        landed = landed.concat(falling);
+        falling = utils.randomIndex(tetrominos);
+      }
+    }
+  }
   render();
 };
 
@@ -59,17 +73,17 @@ function render() {
   document.body.innerHTML =
     "<pre>" +
     utils.range(height).reduce(
-      (acc, cur, i) =>
+      (acc, _, i) =>
         acc +
         "\n" +
-        utils.range(width).reduce((acc, cur, j) => {
+        utils.range(width).reduce((acc, _, j) => {
           if (
             utils.tail(falling).some(x => utils.equal([i, j], x)) ||
             landed.some(x => utils.equal([i, j], x))
           ) {
             return acc + "#";
           } else {
-            return acc + ".";
+            return acc + emptyPlayfieldCell;
           }
         }, ""),
       ""
